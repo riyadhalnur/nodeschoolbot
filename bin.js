@@ -56,7 +56,7 @@ const server = http.createServer(function (req, res) {
     let cmds = parseCommand(body.comment && body.comment.body);
     if (!cmds) return res.end();
 
-    let from = body.sender && body.sender.loginl
+    let from = body.sender && body.sender.login;
     if (from === 'nodeschoolbot') return res.end();
 
     let added = [];
