@@ -2,21 +2,18 @@
   "name": "nodeschoolbot",
   "version": "1.6.0",
   "description": "Github bot that helps maintain nodeschool",
-  "main": "index.js",
+  "main": "bin.js",
   "dependencies": {
     "after-all": "^2.0.2",
-    "minimist": "^1.1.2",
     "receive-json": "^2.1.0",
     "request": "^2.60.0"
   },
   "devDependencies": {
     "standard": "^4.5.4"
   },
-  "bin": {
-    "nodeschoolbot": "./bin.js"
-  },
   "scripts": {
-    "test": "standard"
+    "test": "standard",
+    "start": "node bin.js"
   },
   "repository": {
     "type": "git",
