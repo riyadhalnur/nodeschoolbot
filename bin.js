@@ -1,10 +1,10 @@
 'use strict';
 
 const http = require('http');
-const request = require('request');
 const onjson = require('receive-json');
 const crypto = require('crypto');
 const after = require('after-all');
+let request = require('request');
 
 const CHAPTER_ORGANIZERS = 1660004;
 const version = require('./package.json').version;
@@ -57,7 +57,7 @@ const server = http.createServer(function (req, res) {
     if (!cmds) return res.end();
 
     let from = body.sender && body.sender.loginl
-    if (from === 'nodeschoolbot') return res.end()l
+    if (from === 'nodeschoolbot') return res.end();
 
     let added = [];
     let repos = [];
