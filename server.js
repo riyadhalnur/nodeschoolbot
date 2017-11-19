@@ -255,8 +255,8 @@ function createRepository(name, cb) {
   request.post('https://api.github.com/orgs/nodeschool/repos', {
     json: {
       name: name,
-      description: 'repo for organizing the ' + name + ' nodeschools',
-      homepage: 'https://nodeschool.github.io/' + name,
+      description: `Repo for organizing the ${name} nodeschools`,
+      homepage: `https://nodeschool.github.io/${name}`,
       private: false,
       has_issues: true,
       has_wiki: false,
@@ -271,10 +271,12 @@ function createTeam(name, cb) {
   request.post('https://api.github.com/orgs/nodeschool/teams', {
     json: {
       name: name,
+      description: `Team for organizing the ${name} nodeschools`,
+      repo_names: [`nodeschool/${name}`],
       privacy: 'closed' // weird naming, actually 'public'
     },
     headers: {
-      'Accept': 'application/vnd.github.ironman-preview+json'
+      'Accept': 'application/vnd.github.hellcat-preview+json'
     }
   }, handleResponse(cb));
 }
