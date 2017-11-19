@@ -317,7 +317,7 @@ function addTeamUser(team, username, body, cb) {
         return res;
       });
       
-      pmap(username, mapper).then(result => cb(null, result)).catch(err => cb(err));
+      pmap(username, mapper).then(result => cb()).catch(err => cb(err));
     } else {
       request.put('https://api.github.com/teams/' + teamId + '/memberships/' + username, handleResponse(cb));
     }
