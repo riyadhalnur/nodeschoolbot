@@ -4,6 +4,7 @@ const http = require('http');
 const onjson = require('receive-json');
 const crypto = require('crypto');
 const after = require('after-all');
+const pmap = require('p-map');
 let request = require('request');
 
 const CHAPTER_ORGANIZERS = 1660004;
@@ -36,7 +37,7 @@ const help = '' +
   '* `create-team {team}` - creates a new team\n' +
   '* `add-team-user {team} {username}` - add a user to a specific team\n'
 
-const server = http.createServer(function (req, res) {
+const server = http.createServer(function(req, res) {
   if (req.method === 'GET') {
     res.end('hello, i am the nodeschoolbot\n');
     return;
@@ -45,19 +46,29 @@ const server = http.createServer(function (req, res) {
   const hmac = crypto.createHmac('sha1', secret);
 
   req.setEncoding('utf-8');
-  req.on('data', function (data) {
+  req.on('data', function(data) {
     hmac.update(data, 'utf-8'); // gah weird defaults
   });
 
-  onjson(req, function (err, body) {
-    if (err) return res.end();
-    if (verify && 'sha1=' + hmac.digest('hex') !== req.headers['x-hub-signature']) return res.end();
+  onjson(req, function(err, body) {
+    if (err) {
+      return res.end();
+    }
+    
+    if (verify && 'sha1=' + hmac.digest('hex') !== req.headers['x-hub-signature']) {
+      return res.end();
+    }
 
     let cmds = parseCommand(body.comment && body.comment.body);
-    if (!cmds) return res.end();
+    
+    if (!cmds) {
+      return res.end();
+    }
 
     let from = body.sender && body.sender.login;
-    if (from === 'nodeschoolbot') return res.end();
+    if (from === 'nodeschoolbot') {
+      return res.end();
+    }
 
     let added = [];
     let repos = [];
@@ -65,9 +76,9 @@ const server = http.createServer(function (req, res) {
     let addedteam = {};
     let emptyOk = false;
 
-    authenticate(function () {
+    authenticate(function() {
       let next = after(format);
-      cmds.forEach(function (cmd) {
+      cmds.forEach(function(cmd) {
         if (cmd.name === 'barrel-roll') {
           emptyOk = true;
           comment(body, '![barrel-roll](https://i.chzbgr.com/maxW500/5816682496/h83DFAE3F/)', next());
@@ -99,10 +110,18 @@ const server = http.createServer(function (req, res) {
 
         if (cmd.args.length >= 1 && cmd.name === 'add-team-user') {
           team = stripAtSign(cmd.args[0]);
-          user = stripAtSign(cmd.args[1]);
+          user = cmd.args.length === 2 ? stripAtSign(cmd.args[1]) : cmd.args.slice(1, cmd.args.length);
 
-          if (!addedteam[team]) addedteam[team] = [];
-          addedteam[team].push(user);
+          if (!addedteam[team]) {
+            addedteam[team] = [];
+          }
+
+          if (Array.isArray(user)) {
+            addedteam[team] = user;
+          } else {
+            addedteam[team].push(user);
+          }
+
           addTeamUser(team, user, body, next());
           return;
         }
@@ -114,59 +133,87 @@ const server = http.createServer(function (req, res) {
       });
     });
 
-    function format (err) {
-      if (err) return done(err);
+    function format(err) {
+      if (err) {
+        return done(err);
+      }
 
       let msg = '';
 
       if (repos.length) {
         msg += 'I have created ' + (repos.length === 1 ? 'a' : repos.length) + ' new repo' + (repos.length === 1 ? '' : 's') + ' called ';
-        repos.forEach(function (repo, i) {
-          if (i) msg += ', ';
+        repos.forEach(function(repo, i) {
+          if (i) {
+            msg += ', ';
+          }
+
           msg += '[' + repo + '](https://github.com/nodeschool/' + repo + ')';
         });
       }
 
       if (added.length) {
-        if (msg) msg += 'and ';
+        if (msg) {
+          msg += 'and ';
+        }
+
         msg += 'I have added ';
-        added.forEach(function (user, i) {
-          if (i) msg += ', ';
+        added.forEach(function(user, i) {
+          if (i) {
+            msg += ', ';
+          }
+
           msg += '@' + user;
         });
+
         msg += ' to the `chapter-organizers` team.';
       }
 
       if (newTeams.length) {
-        if (msg) msg += 'and ';
+        if (msg) {
+          msg += 'and ';
+        }
+
         msg += 'I have created ';
-        newTeams.forEach(function (team, i) {
-          if (i) msg += ', ';
+        newTeams.forEach(function(team, i) {
+          if (i) {
+            msg += ', ';
+          }
+          
           msg += '@nodeschool/' + team;
         });
+        
         msg += 'team' + (newTeams.length > 1 ? 's' : '');
       }
 
       if (Object.keys(addedteam).length) {
-        for (var team in addedteam) {
+        for (let team in addedteam) {
           msg += 'I have invited ';
-          addedteam[team].forEach(function (user, i) {
-            if (i) msg += ', ';
+          addedteam[team].forEach(function(user, i) {
+            if (i) {
+              msg += ', ';
+            }
+
             msg += '@' + user;
           });
+
           msg += ' to the `' + team + '` team.\n';
         }
       }
 
-      if (emptyOk && !msg) return done();
+      if (emptyOk && !msg) {
+        return done();
+      }
+
       comment(body, msg || help, done);
     }
 
-    function authenticate (cb) {
+    function authenticate(cb) {
       request.get('https://api.github.com/teams/' + CHAPTER_ORGANIZERS + '/memberships/' + from, {
         json: true
-      }, function (err, response) {
-        if (err) return done(err);
+      }, function(err, response) {
+        if (err) {
+          return done(err);
+        }
 
         if (response.statusCode !== 200 || response.body.state !== 'active') {
           let msg = 'Sorry @' + from + '. You are not allowed to do that if you are not a member of the `chapter-organizers` team';
@@ -178,7 +225,7 @@ const server = http.createServer(function (req, res) {
       });
     }
 
-    function done (err) {
+    function done(err) {
       if (err) {
         console.error('Error: ' + err.stack);
         res.statusCode = 500;
@@ -186,16 +233,17 @@ const server = http.createServer(function (req, res) {
         comment(body, 'I have encountered an error doing this :(\n\n```\n' + err.stack + '\n```');
         return;
       }
+
       res.end();
     }
   });
 });
 
-server.listen(process.env.PORT || 8080, function () {
+server.listen(process.env.PORT || 8080, function() {
   console.log('nodeschoolbot is now listening for webhooks on %d', server.address().port);
 });
 
-function addUser (username, cb) {
+function addUser(username, cb) {
   request.put('https://api.github.com/teams/' + CHAPTER_ORGANIZERS + '/memberships/' + username, {
     json: {
       role: 'member'
@@ -203,7 +251,7 @@ function addUser (username, cb) {
   }, handleResponse(cb));
 }
 
-function createRepository (name, cb) {
+function createRepository(name, cb) {
   request.post('https://api.github.com/orgs/nodeschool/repos', {
     json: {
       name: name,
@@ -219,7 +267,7 @@ function createRepository (name, cb) {
   }, handleResponse(cb));
 }
 
-function createTeam (name, cb) {
+function createTeam(name, cb) {
   request.post('https://api.github.com/orgs/nodeschool/teams', {
     json: {
       name: name,
@@ -231,28 +279,52 @@ function createTeam (name, cb) {
   }, handleResponse(cb));
 }
 
-function addTeamUser (team, username, body, cb) {
+function addTeamUser(team, username, body, cb) {
   request.get({
     url: 'https://api.github.com/orgs/nodeschool/teams',
     json: true,
     qs: {
       per_page: Number.MAX_SAFE_INTEGER // otherwise GitHub API will default to 30 results per page
     }
-  }, function (e, r, teams) {
-    if (e) return cb(e);
+  }, function(e, r, teams) {
+    if (e) {
+      return cb(e);
+    }
+    
     let teamId;
+    
     for (let i = 0; i < teams.length; i++) {
       if (teams[i].slug === team) {
         teamId = teams[i].id;
         break;
       }
     }
-    if (!teamId) return comment(body, 'I cannot find the team `' + team + '` ', cb);
-    request.put('https://api.github.com/teams/' + teamId + '/memberships/' + username, handleResponse(cb));
+    
+    if (!teamId) {
+      return comment(body, 'I cannot find the team `' + team + '` ', cb);
+    }
+
+    if (Array.isArray(username)) {
+      const mapper = el => request.put('https://api.github.com/teams/' + teamId + '/memberships/' + el, (err, res) => {
+        if (err) {
+          return err;
+        }
+    
+        if (!/2\d\d/.test(res.statusCode)) {
+          return new Error('Bad status: ' + res.statusCode);
+        }
+    
+        return res;
+      });
+      
+      pmap(username, mapper).then(result => cb(null, result)).catch(err => cb(err));
+    } else {
+      request.put('https://api.github.com/teams/' + teamId + '/memberships/' + username, handleResponse(cb));
+    }
   });
 }
 
-function comment (body, msg, cb) {
+function comment(body, msg, cb) {
   request.post('https://api.github.com/repos/' + body.repository.full_name + '/issues/' + body.issue.number + '/comments', {
     json: {
       body: msg
@@ -260,29 +332,43 @@ function comment (body, msg, cb) {
   }, handleResponse(cb));
 }
 
-function handleResponse (cb) {
-  return function (err, res) {
-    if (err) return cb(err);
-    if (!/2\d\d/.test(res.statusCode)) return cb(new Error('Bad status: ' + res.statusCode));
+function handleResponse(cb) {
+  return function(err, res) {
+    if (err) {
+      return cb(err);
+    }
+
+    if (!/2\d\d/.test(res.statusCode)) {
+      return cb(new Error('Bad status: ' + res.statusCode));
+    }
+
     cb();
   };
 }
 
-function stripAtSign (str) {
+function stripAtSign(str) {
   return str[0] === '@' ? str.slice(1) : str;
 }
 
-function parseCommand (comment) {
-  if (!comment) return;
+function parseCommand(comment) {
+  if (!comment) {
+    return;
+  }
+  
   let line = comment.match(/@nodeschoolbot\s([^\n]*)/g);
-  if (!line) return null;
+  
+  if (!line) {
+    return null;
+  }
+  
   if (/barrel.?roll/.test(comment)) {
     return [{
       name: 'barrel-roll',
       args: []
     }];
   }
-  return line.map(function (l) {
+
+  return line.map(function(l) {
     var args = l.trim().split(/\s+/).slice(1)
     return {
       name: args[0] || '',
