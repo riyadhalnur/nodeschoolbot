@@ -14,11 +14,10 @@
     "request": "^2.60.0"
   },
   "devDependencies": {
-    "nodemon": "1.12.1",
-    "standard": "^4.5.4"
+    "nodemon": "1.12.1"
   },
   "scripts": {
-    "test": "standard",
+    "test": "echo \"Error: no test specified\" && exit 0",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
