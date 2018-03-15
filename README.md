@@ -22,6 +22,7 @@ Run a command by mentioning @nodeschoolbot in an issue comment, e.g. `@nodeschoo
 * `add-user {username}` - adds a user to the `chapter-organizers` team and the org
 * `create-team {team}` - creates a new team
 * `add-team-user {team} {username}` - add a user to a specific team
+* `create-chapter {name}` - creates a new chapter
 
 ## Run one yourself
 

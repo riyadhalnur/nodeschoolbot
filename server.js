@@ -1,10 +1,12 @@
 'use strict';
 
 const http = require('http');
+const util = require('util');
 const onjson = require('receive-json');
 const crypto = require('crypto');
 const after = require('after-all');
 const pmap = require('p-map');
+const pwaterfall = require('p-waterfall');
 let request = require('request');
 
 const CHAPTER_ORGANIZERS = 1660004;
@@ -35,7 +37,8 @@ const help = '' +
   '* `create-repo {name}` - creates a nodeschool repo\n' +
   '* `add-user {username}` - adds a user to the `chapter-organizers` team and the org\n' +
   '* `create-team {team}` - creates a new team\n' +
-  '* `add-team-user {team} {username}` - add a user to a specific team\n'
+  '* `add-team-user {team} {username}` - add a user to a specific team\n' +
+  '* `create-chapter {name}` - creates a new chapter\n'
 
 const server = http.createServer(function(req, res) {
   if (req.method === 'GET') {
@@ -93,6 +96,7 @@ const server = http.createServer(function(req, res) {
 
         let user;
         let team;
+        let chapter;
 
         if (cmd.args.length >= 1 && cmd.name === 'add-user') {
           user = stripAtSign(cmd.args[0]);
@@ -123,6 +127,11 @@ const server = http.createServer(function(req, res) {
           }
 
           addTeamUser(team, user, body, next());
+          return;
+        }
+
+        if (cmd.args.length >= 1 && cmd.name === 'create-chapter') {
+          chapter = stripAtSign(cmd.args[0]);
           return;
         }
 
@@ -324,6 +333,20 @@ function addTeamUser(team, username, body, cb) {
       request.put('https://api.github.com/teams/' + teamId + '/memberships/' + username, handleResponse(cb));
     }
   });
+}
+
+function createChapter(name, cb) {
+  const createRepositoryAsync = util.promisify(createRepository);
+  const createTeamAsync = util.promisify(createTeam);
+
+  let tasks = [
+    name => createRepository(name),
+    prevVal => createTeamAsync(name)
+  ];
+
+  pwaterfall(tasks, name)
+    .then(res => cb(null, res))
+    .catch(err => cb(err));
 }
 
 function comment(body, msg, cb) {

@@ -10,6 +10,7 @@
   "dependencies": {
     "after-all": "^2.0.2",
     "p-map": "1.2.0",
+    "p-waterfall": "1.0.0",
     "receive-json": "^2.1.0",
     "request": "^2.60.0"
   },
