@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "alias": ["nodeschoolbot"],
+  "builds": [
+    { "src": "*.js", "use": "@vercel/node" }
+  ]
+}

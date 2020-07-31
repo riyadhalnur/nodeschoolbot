@@ -40,7 +40,7 @@ const help = '' +
   '* `add-team-user {team} {username}` - add a user to a specific team\n' +
   '* `create-chapter {name}` - creates a new chapter\n'
 
-const server = http.createServer(function(req, res) {
+module.exports = (req, res) => {
   if (req.method === 'GET') {
     res.end('hello, i am the nodeschoolbot\n');
     return;
@@ -246,11 +246,7 @@ const server = http.createServer(function(req, res) {
       res.end();
     }
   });
-});
-
-server.listen(process.env.PORT || 8080, function() {
-  console.log('nodeschoolbot is now listening for webhooks on %d', server.address().port);
-});
+};
 
 function addUser(username, cb) {
   request.put('https://api.github.com/teams/' + CHAPTER_ORGANIZERS + '/memberships/' + username, {
